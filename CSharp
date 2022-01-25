@@ -1,0 +1,129 @@
+using System.Collections;
+using System.Collections.Generic;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Queens
+{
+
+    static List<List<int>> result = new List<List<int>>();
+
+    //kontroluje, zda dama na potencialni pozici neni ohrozena zadnou predchozi umistenou damou
+    static bool isQueenSafe (int[,] board, int row, int col, int N)
+    {
+        int i, j;
+
+        //radek na leve strane
+        for (i = 0; i < col; i++)
+            if (board[row, i] == 1)
+                return false;
+
+        //leva horni diagonala
+        for (i = row, j = col; i >= 0 && j >= 0; i--, j--)
+            if (board[i, j] == 1)
+                return false;
+
+        //leva dolni diagonala
+        for (i = row, j = col; j >= 0 && i < N; i++, j--)
+            if (board[i, j] == 1)
+                return false;
+
+        return true;
+    }
+
+    //rekurzivni funkce pro vyreseni NQueen
+    static bool solveNQUtility (int[,] board, int col, int N)
+    {
+        //pokud jsou umisteny vsechny damy, vraci true
+        if (col == N)
+        {
+            List<int> v = new();
+
+            for (int i =0;i<N;i++) 
+              {
+                  for (int j = 0; j < N; j++)
+                  {
+                      if (board[i, j] == 1)
+                      {
+                            v.Add(j + 1);
+                      }
+                  }
+              }
+            lock (result)
+            {
+                result.Add(v);
+                return true;
+            }            
+        }
+
+        //zkousi umistit damu do tohoto sloupce po jednotlivych radach
+        bool res = false;
+
+        for (int i = 0; i < N; i++)
+        {
+            //kontroluje zda muze byt umistena
+            if (isQueenSafe(board, i, col, N))
+            {
+                //umistit kralovnu
+                board[i, col] = 1;
+
+                //vysledek je pravdivy pokud jakekoli usporadani je mozne
+                res = solveNQUtility(board, col + 1, N) || res;
+
+                board[i, col] = 0; // BACKTRACK
+            }
+        }
+
+        return res;
+    }
+
+
+    static List<List<int>> solveNQ(int n)
+    {
+        result.Clear();
+
+        //neparalelni verze
+        //int[,] board = new int[n, n];
+        //solveNQUtility (board, 0, n);
+
+
+        //paralelni verze - ulohu rozdelim na n samostatnych poduloh - podle umisteni damy na prvnim sloupci
+        Parallel.For(0, n, i =>
+        {
+            int[,] board = new int[n, n];
+            board[i, 0] = 1;
+            solveNQUtility(board, 1, n);
+        });
+
+        return result;
+    }
+
+    public static void Main()
+    {
+        Console.WriteLine("Zadejte počet řádků šachovnice:");
+
+        int n = int.Parse(Console.ReadLine());
+        var timeStart = DateTime.Now;
+
+        List<List<int>> res = solveNQ(n);
+        var ProgramTime = DateTime.Now - timeStart;
+
+        Console.WriteLine("Počet řešení: " + res.Count);
+        Console.WriteLine("Cas vypoctu: " + ProgramTime.TotalMilliseconds);
+
+        //po odkomentovani moznost vypisu
+
+        //for (int i = 0; i < res.Count; i++)
+        //{
+        //    Console.Write("[");
+        //    for (int j = 0; j < res[i].Count; j++)
+        //    {
+        //        Console.Write(res[i][j] + " ");
+        //    }
+        //    Console.Write("]");
+        //}
+    }
+}
+
+
